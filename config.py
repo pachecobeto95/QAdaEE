@@ -83,3 +83,40 @@ urlConfModelCloud = "%s/api/cloud/modelConfiguration"%(URL_CLOUD)
 threshold_list = [0.8]
 overhead_list = [0, 1, 5, 10, 15, 20, 25, 30]
 gamma_list = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+
+weight_decay=2e-05 
+ngpus=6
+max_epochs=600 
+momentum=0.9
+lr=0.5
+lr_min = 0
+lr_scheduler='cosineannealinglr' 
+lr_warmup_epochs=5
+lr_warmup_method='linear' 
+lr_warmup_decay=0.01
+norm_weight_decay=0.0
+label_smoothing=0.1 
+mixup_alpha=0.2 
+cutmix_alpha=1.0 
+auto_augment='ta_wide'
+random_erase=0.1
+  
+ra_sampler=True
+ra_reps=4
+ra_magnitude = 9
+
+# EMA configuration
+model_ema=True 
+model_ema_steps=32 
+model_ema_decay=0.99998
+
+# Resizing
+interpolation='bilinear'
+val_resize_size=232 
+val_crop_size=224
+train_crop_size=176
+hflip_prob = 0.5
+
+
+fixed_threshold = 0.6

@@ -268,7 +268,55 @@ class Early_Exit_DNN(nn.Module):
 		self.softmax = nn.Softmax(dim=1)
 
 
+	def forwardTraining(self, x):
+		"""
+		This method runs the DNN model during the training phase.
+		x (tensor): input image
+		"""
+		
+		output_list, conf_list, class_list, inf_time_list  = [], [], [], []
+		#starter, ender = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+
+		for i, exitBlock in enumerate(self.exits):
+
+			#This line process a DNN backbone until the (i+1)-th side branch (early-exit)
+			x = self.stages[i](x)
+
+			#This runs the early-exit classifications (prediction)
+			output_branch = exitBlock(x)
+			
+			#This obtains the classification and confidence value in each side branch
+			#Confidence is the maximum probability of belongs one of the predefined classes
+			#The prediction , a.k.a inference_class,  is the argmax output. 
+			conf_branch, prediction = torch.max(self.softmax(output_branch), 1)
+
+			#This apprends the gathered confidences and classifications into a list
+			output_list.append(output_branch), conf_list.append(conf_branch), class_list.append(prediction)
+
+		#This executes the last piece of DNN backbone
+		x = self.stages[-1](x)
+
+		x = torch.flatten(x, 1)
+
+		#This generates the last-layer classification
+		output = self.classifier(x)
+		infered_conf, infered_class = torch.max(self.softmax(output), 1)
+
+		output_list.append(output)
+		conf_list.append(infered_conf), class_list.append(infered_class)
+
+		return output_list, conf_list, class_list
+
+
+
 	def forwardExtractingInferenceData(self, x):
+
+		if (self.device.type == "cuda"):
+			return self.forwardExtractingInferenceDataGPU(x)
+		elif (self.device.type == "cpu"):
+ 			return self.forwardExtractingInferenceDataCPU(x)
+
+	def forwardExtractingInferenceDataGPU(self, x):
 		"""
 		This method runs the DNN model during the training phase.
 		x (tensor): input image
@@ -328,6 +376,67 @@ class Early_Exit_DNN(nn.Module):
 
 		return output_list, conf_list, class_list, inf_time_list, cumulative_inf_time_list
 
+
+
+	def forwardExtractingInferenceDataCPU(self, x):
+		"""
+		This method runs the DNN model during the training phase.
+		x (tensor): input image
+		"""
+		
+		output_list, conf_list, class_list, inf_time_list  = [], [], [], []
+		
+		cumulative_inf_time = 0.0
+
+		for i, exitBlock in enumerate(self.exits):
+
+			#This lines starts a timer to measure processing time
+			starter = time.time()
+
+			#This line process a DNN backbone until the (i+1)-th side branch (early-exit)
+			x = self.stages[i](x)
+
+			#This runs the early-exit classifications (prediction)
+			output_branch = exitBlock(x)
+			
+			#This obtains the classification and confidence value in each side branch
+			#Confidence is the maximum probability of belongs one of the predefined classes
+			#The prediction , a.k.a inference_class,  is the argmax output. 
+			conf_branch, prediction = torch.max(self.softmax(output_branch), 1)
+
+			#This line terminates the timer started previously.
+			ender = time.time()
+			curr_time = ender - starter
+
+			#This apprends the gathered confidences and classifications into a list
+			output_list.append(output_branch), conf_list.append(conf_branch), class_list.append(prediction), inf_time_list.append(curr_time)
+
+		#This measures the processing time for the last piece of DNN backbone
+		starter = time.time()
+
+		#This executes the last piece of DNN backbone
+		x = self.stages[-1](x)
+
+		x = torch.flatten(x, 1)
+
+		#This generates the last-layer classification
+		output = self.classifier(x)
+		infered_conf, infered_class = torch.max(self.softmax(output), 1)
+
+		#This ends the timer
+		ender = time.time()
+		curr_time = ender - starter
+
+		output_list.append(output)
+		conf_list.append(infered_conf), class_list.append(infered_class), inf_time_list.append(curr_time)
+
+		cumulative_inf_time_list = np.cumsum(inf_time_list)
+
+		return output_list, conf_list, class_list, inf_time_list, cumulative_inf_time_list
+
+
+
+
 	def forwardInference(self, x, threshold):
 		conf_list, infered_class_list = [], []
 
@@ -361,6 +470,8 @@ class Early_Exit_DNN(nn.Module):
 			conf_list.append(conf.item()), infered_class_list.append(infered_class.item())
 			max_conf = np.argmax(conf_list)
 			return output, conf_list[max_conf], infered_class_list[max_conf], False
+
+
 
 	def global_temperature_scaling(self, logits, temperature_overall):
 		return torch.div(logits, temperature_overall)
