@@ -58,7 +58,7 @@ def extracting_ee_inference_data(args, class_names, test_loader, model, device):
 
 def main(args):
 
-	n_classes = 257
+	n_classes = 10
 
 	device_str = 'cuda' if (torch.cuda.is_available() and args.use_gpu) else 'cpu'
 
@@ -67,19 +67,19 @@ def main(args):
 	model_path = os.path.join(config.DIR_PATH, args.model_name, "models", "ee_model_%s_%s_branches_%s_id_%s.pth"%(args.model_name, 
 		args.n_branches, args.loss_weights_type, args.model_id))
 
-	indices_path = os.path.join(config.DIR_PATH, "indices_%s.pt"%(args.dataset_name))
-
 	inf_data_dir_path = os.path.join(config.DIR_PATH, args.model_name, "inference_data")
 	os.makedirs(inf_data_dir_path, exist_ok=True)
 
-	inf_data_path = os.path.join(inf_data_dir_path, "inf_data_ee_%s_%s_branches_%s_id_%s_%s.csv"%(args.model_name, 
-		args.n_branches, args.loss_weights_type, args.model_id, args.location))
+	inf_data_path = os.path.join(inf_data_dir_path, "inf_data_ee_%s_%s_branches_%s_id_%s_%s_%s.csv"%(args.model_name, 
+		args.n_branches, args.loss_weights_type, args.model_id, args.location, args.dataset_name))
 	
 	ee_model = ee_dnns.load_eednn_model(args, n_classes, model_path, device)
 
-	dataset_path = os.path.join("datasets", args.dataset_name)
+	dataset_path = os.path.join("datasets")
 
-	_, _, test_loader, class_names = utils.load_caltech256(args, dataset_path, indices_path)
+	#_, _, test_loader, class_names = utils.load_caltech256(args, dataset_path, indices_path)
+
+	_, test_loader, class_names = utils.load_cifar10(args.batch_size_train, dataset_path)
 
 	df_inf_data = extracting_ee_inference_data(args, class_names, test_loader, ee_model, device)
 
