@@ -7,35 +7,29 @@ import torch.nn as nn
 import pandas as pd
 
 
-def computing_service_rate(df_edge, df_cloud, class_name, overhead):
+def computing_service_rate(df_edge, df_cloud, class_name):
 
-	df_ee_classified_edge = df_cloud#[df_cloud.conf_branch_1 >= threshold]
-	df_end_classified_edge = df_edge#[df_edge.conf_branch_1 < threshold]
-	df_end_classified_cloud = df_cloud#[df_cloud.conf_branch_1 < threshold]
+	df_ee_classified_edge = df_edge
+	df_end_classified_edge = df_edge
+	df_end_classified_cloud = df_cloud
 
 
 	avg_ee_edge_inf_time = df_ee_classified_edge.delta_inf_time_branch_1.mean()
 	df_end_cloud_inf_time = df_end_classified_edge.delta_inf_time_branch_1 + df_end_classified_cloud.delta_inf_time_branch_2
-	avg_end_cloud_inf_time = df_end_cloud_inf_time.mean() + overhead
+	avg_end_cloud_inf_time = df_end_cloud_inf_time.mean()
 
-	#print(avg_ee_edge_inf_time, avg_end_cloud_inf_time)
-
-	#sys.exit()
-
-	mu_a, mu_b = float(1)/float(avg_ee_edge_inf_time), float(1)/float(avg_end_cloud_inf_time)
-
-	print(class_name, mu_a, mu_b)
+	mu_a, mu_b = float(1)/float(avg_ee_edge_inf_time), float(1)/float(avg_end_cloud_inf_time) 
 
 	service_rate_results = {"mu_a": [mu_a], "mu_b": [mu_b], "ee_edge_inf_time": [avg_ee_edge_inf_time], 
-	"end_cloud_inf_time": [avg_end_cloud_inf_time], "class_name": [class_name], 'overhead': [overhead]}
+	"end_cloud_inf_time": [avg_end_cloud_inf_time], "class_name": [class_name]}
 
 	return service_rate_results
 
 def computing_packet_loss(df_edge, df_cloud, class_name):
 
-	df_ee_classified_edge = df_edge#[df_edge.conf_branch_1 >= threshold]
+	df_ee_classified_edge = df_edge
 
-	df_end_classified_cloud = df_cloud#[df_cloud.conf_branch_1 < threshold]
+	df_end_classified_cloud = df_cloud
 
 	ee_acc = float(df_ee_classified_edge.correct_branch_1.sum())/float(df_ee_classified_edge.shape[0])
 
@@ -58,8 +52,8 @@ def main(args):
 	os.makedirs(inf_data_dir_path, exist_ok=True)
 
 	results_path = os.path.join(config.DIR_PATH, args.model_name, "results",
-		"qAdaEE_params_%s_%s_branches_%s_id_%s_%s_vfinal3.csv"%(args.model_name, args.n_branches, args.loss_weights_type,
-			args.model_id, args.dataset_name))
+		"qAdaEE_params_%s_%s_branches_%s_id_%s_%s_no_threshold.csv"%(args.model_name, args.n_branches, args.loss_weights_type,
+			args.model_id, args.dataset_name))	
 
 	edge_inf_data_path = os.path.join(inf_data_dir_path, "inf_data_ee_%s_%s_branches_%s_id_%s_laptop_%s.csv"%(args.model_name, 
 		args.n_branches, args.loss_weights_type, args.model_id, args.dataset_name))
@@ -74,22 +68,19 @@ def main(args):
 
 	class_name_list = df_cloud.class_name.unique()
 
-	overhead_list = [0, 10, 100]
 
-	for overhead in overhead_list:
+	for class_name in class_name_list:
+		df_class_edge = df_edge[df_edge.class_name == class_name]
+		df_class_cloud = df_cloud[df_cloud.class_name == class_name]
 
-		for class_name in class_name_list:
-			df_class_edge = df_edge[df_edge.class_name == class_name]
-			df_class_cloud = df_cloud[df_cloud.class_name == class_name]
+		service_rate_results = computing_service_rate(df_class_edge, df_class_cloud, class_name)
+		packet_loss_results = computing_packet_loss(df_edge, df_cloud, class_name)
 
-			service_rate_results = computing_service_rate(df_class_edge, df_class_cloud, class_name, overhead)
-			packet_loss_results = computing_packet_loss(df_edge, df_cloud, class_name)
+		service_rate_results.update(packet_loss_results)
 
-			service_rate_results.update(packet_loss_results)
+		df_results = pd.DataFrame(np.array(list(service_rate_results.values())).T, columns=list(service_rate_results.keys()))
 
-			df_results = pd.DataFrame(np.array(list(service_rate_results.values())).T, columns=list(service_rate_results.keys()))
-
-			df_results.to_csv(results_path, mode='a', header=not os.path.exists(results_path))
+		df_results.to_csv(results_path, mode='a', header=not os.path.exists(results_path))
 
 
 
