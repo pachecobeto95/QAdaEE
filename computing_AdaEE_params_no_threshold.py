@@ -7,17 +7,19 @@ import torch.nn as nn
 import pandas as pd
 
 
-def computing_service_rate(df_edge, df_cloud, class_name):
+def computing_service_rate(df_edge, df_cloud, class_name): # calculates service rate for each class
 
+	# defining dataframes for classification samples:
 	df_ee_classified_edge = df_edge
 	df_end_classified_edge = df_edge
 	df_end_classified_cloud = df_cloud
 
-
+	# time metrics:
 	avg_ee_edge_inf_time = df_ee_classified_edge.delta_inf_time_branch_1.mean()
 	df_end_cloud_inf_time = df_end_classified_edge.delta_inf_time_branch_1 + df_end_classified_cloud.delta_inf_time_branch_2
 	avg_end_cloud_inf_time = df_end_cloud_inf_time.mean()
 
+	# calculating and returning the service rates:
 	mu_a, mu_b = float(1)/float(avg_ee_edge_inf_time), float(1)/float(avg_end_cloud_inf_time) 
 
 	service_rate_results = {"mu_a": [mu_a], "mu_b": [mu_b], "ee_edge_inf_time": [avg_ee_edge_inf_time], 
@@ -25,14 +27,14 @@ def computing_service_rate(df_edge, df_cloud, class_name):
 
 	return service_rate_results
 
-def computing_packet_loss(df_edge, df_cloud, class_name):
+def computing_packet_loss(df_edge, df_cloud, class_name): # calculates total packet loss
 
+	# defining dataframes for classified samples: 
 	df_ee_classified_edge = df_edge
-
 	df_end_classified_cloud = df_cloud
 
+	# calculating accuracies, losses and returning results
 	ee_acc = float(df_ee_classified_edge.correct_branch_1.sum())/float(df_ee_classified_edge.shape[0])
-
 	end_acc = float(df_end_classified_cloud.correct_branch_2.sum())/float(df_end_classified_cloud.shape[0])
 
 	packet_loss_a, packet_loss_b = 1 - ee_acc, 1 - end_acc
