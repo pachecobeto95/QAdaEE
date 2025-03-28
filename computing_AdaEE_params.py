@@ -7,13 +7,14 @@ import torch.nn as nn
 import pandas as pd
 
 
-def computing_service_rate(df_edge, df_cloud, class_name, overhead):
+def computing_service_rate(df_edge, df_cloud, class_name, overhead): # calculates service rate for each class
 
+	# defining dataframes for classification samples:
 	df_ee_classified_edge = df_cloud#[df_cloud.conf_branch_1 >= threshold]
 	df_end_classified_edge = df_edge#[df_edge.conf_branch_1 < threshold]
 	df_end_classified_cloud = df_cloud#[df_cloud.conf_branch_1 < threshold]
 
-
+	# time metrics:
 	avg_ee_edge_inf_time = df_ee_classified_edge.delta_inf_time_branch_1.mean()
 	df_end_cloud_inf_time = df_end_classified_edge.delta_inf_time_branch_1 + df_end_classified_cloud.delta_inf_time_branch_2
 	avg_end_cloud_inf_time = df_end_cloud_inf_time.mean() + overhead
@@ -22,6 +23,7 @@ def computing_service_rate(df_edge, df_cloud, class_name, overhead):
 
 	#sys.exit()
 
+	# calculating and returning the service rates:
 	mu_a, mu_b = float(1)/float(avg_ee_edge_inf_time), float(1)/float(avg_end_cloud_inf_time)
 
 	print(class_name, mu_a, mu_b)
@@ -31,18 +33,17 @@ def computing_service_rate(df_edge, df_cloud, class_name, overhead):
 
 	return service_rate_results
 
-def computing_packet_loss(df_edge, df_cloud, class_name):
+def computing_packet_loss(df_edge, df_cloud, class_name): # calculates total packet loss
 
+	# defining dataframes for classified samples: 
 	df_ee_classified_edge = df_edge#[df_edge.conf_branch_1 >= threshold]
-
 	df_end_classified_cloud = df_cloud#[df_cloud.conf_branch_1 < threshold]
 
+	# calculating accuracies, losses and returning results
 	ee_acc = float(df_ee_classified_edge.correct_branch_1.sum())/float(df_ee_classified_edge.shape[0])
-
 	end_acc = float(df_end_classified_cloud.correct_branch_2.sum())/float(df_end_classified_cloud.shape[0])
 
 	packet_loss_a, packet_loss_b = 1 - ee_acc, 1 - end_acc
-
 
 	packet_loss_results = {"packet_loss_a": [packet_loss_a], "packet_loss_b": [packet_loss_b], 
 	"ee_acc": [ee_acc], "end_acc": [end_acc], "class_name": [class_name]}
