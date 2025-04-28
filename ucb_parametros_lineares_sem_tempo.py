@@ -6,7 +6,6 @@ import itertools
 import matplotlib.pyplot as plt
 from tqdm import tqdm  # Para progress bar
 
-
 '''
 Resumo do código:
 
@@ -25,7 +24,7 @@ Recomendo o uso provisorio de funcoes lineares f1(t) = a1*t e f2(t) = a2*t em th
 melhores. As aproximações dependerão do quão sensível ao efeito do tempo de execução o software será.
 
 '''
-
+q_max = 5 # estimativa de tamanho maximo do buffer
 
 class ParametrizedUCB:
     def __init__(self, n_arms, theta1, theta2):
@@ -59,6 +58,10 @@ class ParametrizedUCB:
             if self.counts[i] == 0:
                 return i
 
+        # tratamento de excecao para buffer cheio de 5 elementos:
+        if q >= q_max:
+            return self.theta1 * q_max + self.theta2
+        
         # 3) cálculo dos índices UCB
         ucb_scores = []
         ln_total = math.log(self.total_counts)
@@ -199,7 +202,6 @@ if __name__ == '__main__':
     # Configurações
     lam, T, n_arms = 2.0, 2000, 5
     mu, kappa = 0.05, 0.1
-    q_max = 5  # estimativa de tamanho maximo da fila
 
     # Executar grid search
     searcher = ConstrainedGridSearch(df, lam, T, n_arms, mu, kappa, q_max) # demora (bastante), mas podemos usar um hill climbing ou algo assim pra otimizar e encontrar respostas ok
