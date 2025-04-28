@@ -10,8 +10,10 @@ from tqdm import tqdm  # Para progress bar
 '''
 Resumo do código:
 
-É feita uma grid search em theta1 e theta2 e, para cada grid search, é realizada toda uma simulação
+É feita uma grid search em theta1 e theta2 e, para par (theta1, theta2), é realizada toda uma simulação
 de execução com saídas antecipadas munidas com um buffer. A taxa de chegada de novos elementos ao buffer é lambda.
+
+As 5 melhores combinações de theta1 e theta2 são exibidas e plotadas.
 
 A função de recompensa segue o paper em construção.
 
